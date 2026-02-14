@@ -8,6 +8,7 @@ in
 {
   users.users.narkatee = {
     isNormalUser = true;
+    linger = true;
     extraGroups = [ "wheel" ];
     openssh.authorizedKeys.keys = keyLines;
     hashedPassword = "!";

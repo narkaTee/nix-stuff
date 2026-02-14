@@ -25,3 +25,9 @@ Manage a NixOS hosts with a single flake.
 - `narkatee` is the admin user (SSH keys + passwordless sudo).
 - `narkatee` keys file: `keys/narkatee.pub` (sync from GitHub keys endpoint).
 - Deploy target user should be `narkatee` with `--sudo`.
+
+### Config
+
+- OpenClaw config module: `modules/openclaw.nix`.
+- OpenClaw required docs: `openclaw-documents/{AGENTS.md,SOUL.md,TOOLS.md}`.
+- Encrypted secrets file: `secrets/claw-box.yaml` (managed with sops-nix).

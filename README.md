@@ -3,22 +3,31 @@
 This repo manages NixOS hosts with a single flake.
 Optionally, it bootstraps a host inside a Hetzner Cloud VM.
 
+## Secret management
 
-# Hosts
+Create an age key on your management machine:
 
-## claw-box
+```bash
+mkdir -p ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+chmod 600 ~/.config/sops/age/keys.txt
+age-keygen -y ~/.config/sops/age/keys.txt
+```
 
-- Flake output: `.#claw-box`
-- Host config: `hosts/claw-box/default.nix`
-- `claw-box`: 🦞 VM running OpenClaw
+Copy the printed `age1...` recipient into `secrets/.sops.yaml` as `user_local` and
+include it in `creation_rules`.
 
-### Users
+Then re-encrypt the secret file:
 
-- `root`: no password, no SSH login, no authorized keys.
-- `narkatee`: SSH key-only login, passwordless sudo.
-- `narkatee` keys source: `https://github.com/narkaTee.keys`
-- Keys are stored in `keys/narkatee.pub`.
-- `sshguard` enabled for `sshd`.
+```bash
+./scripts/update-secrets secrets/claw-box.yaml
+```
+
+```bash
+./scripts/update-secrets secrets/<file>.yaml
+```
+
+## Update keys
 
 To refresh `narkatee` keys:
 
@@ -69,3 +78,81 @@ nix flake update
 # evaluate flake outputs shape
 nix flake show "path:$PWD" --no-write-lock-file
 ```
+
+# Hosts
+
+## claw-box
+
+- Flake output: `.#claw-box`
+- Host config: `hosts/claw-box/default.nix`
+- `claw-box`: 🦞 VM running OpenClaw
+
+### Users
+
+- `root`: no password, no SSH login, no authorized keys.
+- `narkatee`: SSH key-only login, passwordless sudo.
+- `narkatee` keys source: `https://github.com/narkaTee.keys`
+- Keys are stored in `keys/narkatee.pub`.
+- `sshguard` enabled for `sshd`.
+
+### OpenClaw on claw-box
+
+- OpenClaw module: `modules/openclaw.nix`
+- OpenClaw documents: `openclaw-documents/`
+- Home Manager user: `narkatee`
+
+#### Telegram setup
+
+1. Create bot with `@BotFather`:
+   - send `/newbot`
+   - pick name + username
+   - copy bot token
+2. Edit secrets file:
+
+```bash
+./scripts/update-secrets secrets/claw-box.yaml
+```
+
+In the editor set:
+- `openclaw_telegram_token`
+- `openclaw_gateway_token` (use `openssl rand -hex 32`)
+- `openclaw_anthropic_api_key`
+
+Apply changes with nix run.
+
+#### Telegram access control (no chat ID in git)
+
+`claw-box` uses `channels.telegram.dmPolicy = "pairing"` so no `allowFrom` list is stored in the repo.
+
+After deploy:
+
+1. Message your bot once from the Telegram account you want to allow.
+2. On the server, list pending pairing requests:
+
+```bash
+ssh claw-box 'sudo -iu narkatee openclaw pairing list telegram'
+```
+
+3. Approve the code:
+
+```bash
+ssh claw-box 'sudo -iu narkatee openclaw pairing approve telegram <CODE>'
+```
+
+Approved IDs are stored on-host under `~/.openclaw/credentials/telegram-allowFrom.json`.
+
+#### Verify OpenClaw
+
+```bash
+ssh claw-box 'systemctl --user status openclaw-gateway --no-pager'
+ssh claw-box 'journalctl --user -u openclaw-gateway -n 100 --no-pager'
+```
+
+Then message your bot again from the approved account.
+
+Encrypted secrets file:
+- `secrets/claw-box.yaml`
+- SOPS config: `secrets/.sops.yaml`
+
+If the VM is reprovisioned (new SSH host key), update `secrets/.sops.yaml`
+recipient and re-encrypt with `scripts/update-secrets`.
