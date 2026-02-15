@@ -52,6 +52,9 @@
     systemd.user.services.openclaw-gateway.Unit.X-Restart-Triggers = [
       config.sops.secrets.openclaw_gateway_token.sopsFileHash
     ];
+    systemd.user.services.openclaw-gateway.Install = {
+      WantedBy = [ "default.target" ];
+    };
     systemd.user.startServices = "sd-switch";
   };
 
