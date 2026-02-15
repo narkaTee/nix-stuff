@@ -3,7 +3,6 @@
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   time.timeZone = "Europe/Berlin";
   console.keyMap = "de";
-  services.xserver.xkb.layout = "de";
 
   services.openssh.enable = true;
   services.openssh.settings.PasswordAuthentication = false;

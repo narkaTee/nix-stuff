@@ -57,6 +57,14 @@ in
 
       home.file.".openclaw/openclaw.json".enable = false;
       home.activation.openclawConfigFiles = lib.mkForce { before = [ ]; after = [ ]; data = ""; };
+      home.file.".config/kxkbrc" = {
+        force = true;
+        text = ''
+          [Layout]
+          LayoutList=de
+          Use=true
+        '';
+      };
 
       systemd.user.services.openclaw-node-host = {
         Unit = {
