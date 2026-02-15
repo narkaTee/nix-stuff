@@ -117,6 +117,7 @@ In the editor set:
 - `openclaw_telegram_token`
 - `openclaw_gateway_token` (use `openssl rand -hex 32`)
 - `openclaw_anthropic_api_key`
+- `openclaw_brave_search_token` (enables `web_search` via `BRAVE_API_KEY`)
 
 Apply changes with nix run.
 

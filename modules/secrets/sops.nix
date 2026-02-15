@@ -23,6 +23,12 @@
     mode = "0400";
   };
 
+  sops.secrets.openclaw_brave_search_token = {
+    owner = "narkatee";
+    group = "users";
+    mode = "0400";
+  };
+
   sops.templates.openclaw_gateway_env = {
     owner = "narkatee";
     group = "users";
@@ -30,6 +36,7 @@
     content = ''
       OPENCLAW_GATEWAY_TOKEN=${config.sops.placeholder.openclaw_gateway_token}
       ANTHROPIC_API_KEY=${config.sops.placeholder.openclaw_anthropic_api_key}
+      BRAVE_API_KEY=${config.sops.placeholder.openclaw_brave_search_token}
     '';
   };
 }
