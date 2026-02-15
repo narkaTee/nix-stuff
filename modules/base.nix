@@ -9,6 +9,11 @@
   services.sshguard.enable = true;
   services.sshguard.services = [ "sshd" ];
 
+  networking.firewall.enable = true;
+  networking.firewall.allowPing = false;
+  networking.firewall.allowedTCPPorts = [ 22 ];
+  networking.firewall.allowedUDPPorts = [ ];
+
   users.mutableUsers = false;
   users.users.root.hashedPassword = "!";
   users.users.root.openssh.authorizedKeys.keys = [ ];

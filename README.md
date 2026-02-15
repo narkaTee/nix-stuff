@@ -120,6 +120,8 @@ Key points:
 - no root login
 - secure ssh defaults
 - sshguard protects sshd service
+- host firewall enabled (default deny), only `22/tcp` allowed
+- inbound ping disabled
 - `root`: no password, no SSH login, no authorized keys
 - enables `nix-command` and `flakes`
 - configures GRUB for `/dev/sda` EFI boot
