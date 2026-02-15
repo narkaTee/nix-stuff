@@ -39,6 +39,7 @@ Manage NixOS hosts with a single flake.
 
 - Source of truth is this repo.
 - Bootstrap new vms with `scripts/bootstrap-hetzner.sh`.
-- Day-2 changes deploy with `nixos-rebuild` from this flake.
+- Day-2 changes deploy from this flake
+- Build must happen on the remote node for any host via `--build-host <host>` (or by running `nixos-rebuild` directly on `<host>`).
 - Do not configure the server manually unless break-glass debugging is required.
 - Deploy as `narkatee` with `--sudo`.
