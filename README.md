@@ -79,6 +79,78 @@ nix flake update
 nix flake show "path:$PWD" --no-write-lock-file
 ```
 
+## Generic Modules
+
+### User: narkatee
+
+Path: `modules/users/narkatee.nix`
+
+The user account used to manage machines.
+
+Key points:
+
+- SSH key-only login
+- passwordless sudo, full system access
+- user manager can run without active login session (`linger = true`)
+- `narkatee` keys source: `https://github.com/narkaTee.keys`
+- Keys are stored in `keys/narkatee.pub`.
+
+### Base module
+
+Path: `modules/base.nix`
+
+Applies the baseline OS hardening and boot settings for remote hosts.
+
+Key points:
+
+- SSH installed
+- no root login
+- secure ssh defaults
+- sshguard protects sshd service
+- `root`: no password, no SSH login, no authorized keys
+- enables `nix-command` and `flakes`
+- configures GRUB for `/dev/sda` EFI boot
+
+### Disko module
+
+Path: `modules/disko.nix`
+
+Defines the disk partitioning and filesystems used during bootstrap install.
+
+Key points:
+
+- GPT layout on `/dev/sda`
+- 1M BIOS partition (`EF02`)
+- 1G EFI system partition mounted at `/boot`
+- ext4 root filesystem mounted at `/`
+
+### SOPS module
+
+Path: `modules/secrets/sops.nix`
+
+Declares encrypted secrets and renders runtime environment variables for OpenClaw.
+
+Key points:
+
+- uses `secrets/claw-box.yaml` as default SOPS file
+- decrypts with host SSH age key (`/etc/ssh/ssh_host_ed25519_key`)
+- installs OpenClaw secrets with mode `0400` for user `narkatee`
+- renders `OPENCLAW_GATEWAY_TOKEN`, `ANTHROPIC_API_KEY`, and `BRAVE_API_KEY`
+
+### OpenClaw module
+
+Path: `modules/openclaw.nix`
+
+Configures Home Manager and the OpenClaw gateway for host `claw-box`.
+
+Key points:
+
+- enables `nix-openclaw` overlay and Home Manager for `narkatee`
+- runs one `instances.default` gateway in local mode with token auth
+- Telegram bot auth uses SOPS token file and `dmPolicy = "pairing"`
+- gateway environment is sourced from rendered SOPS template
+- gateway restarts automatically on secrets file changes
+
 # Hosts
 
 ## claw-box

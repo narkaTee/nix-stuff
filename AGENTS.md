@@ -2,32 +2,40 @@
 
 ## Goal
 
-Manage a NixOS hosts with a single flake.
+Manage NixOS hosts with a single flake.
 
-# Hosts
+## Hosts
 
 | Host | Flake source | Description |
 |------|--------------|-------------|
-| `claw-box` | `hosts/claw-box` | vm running OpenClaw |
+| `claw-box` | `hosts/claw-box/default.nix` | VM running OpenClaw |
+
+## Modules
+
+| Module | Path | Purpose |
+|--------|------|---------|
+| Base | `modules/base.nix` | Baseline host hardening and boot defaults |
+| Disko | `modules/disko.nix` | Disk layout and filesystems |
+| User `narkatee` | `modules/users/narkatee.nix` | Admin user, SSH keys, sudo policy |
+| SOPS | `modules/secrets/sops.nix` | Secrets and rendered runtime env |
+| OpenClaw | `modules/openclaw.nix` | OpenClaw + Home Manager host setup |
+
+## Additional Paths
+
+- Bootstrap script: `scripts/bootstrap-hetzner.sh`
+- Secret editor: `scripts/update-secrets`
+- Encrypted secrets: `secrets/claw-box.yaml`
+- OpenClaw docs: `openclaw-documents/{AGENTS.md,SOUL.md,TOOLS.md}`
+
+## Documentation
+
+- `README.md` is the detailed source for module behavior and operations.
+- See `README.md` sections: `Generic Modules` and `claw-box`.
 
 ## Rules
 
 - Source of truth is this repo.
-- Bootstraping is for the user `scripts/bootstrap-hetzner.sh`.
+- Bootstrap new vms with `scripts/bootstrap-hetzner.sh`.
 - Day-2 changes deploy with `nixos-rebuild` from this flake.
 - Do not configure the server manually unless break-glass debugging is required.
-
-## Host: claw-box
-
-### Access model
-
-- `root` SSH login disabled.
-- `narkatee` is the admin user (SSH keys + passwordless sudo).
-- `narkatee` keys file: `keys/narkatee.pub` (sync from GitHub keys endpoint).
-- Deploy target user should be `narkatee` with `--sudo`.
-
-### Config
-
-- OpenClaw config module: `modules/openclaw.nix`.
-- OpenClaw required docs: `openclaw-documents/{AGENTS.md,SOUL.md,TOOLS.md}`.
-- Encrypted secrets file: `secrets/claw-box.yaml` (managed with sops-nix).
+- Deploy as `narkatee` with `--sudo`.
