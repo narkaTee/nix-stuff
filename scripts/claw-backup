@@ -34,22 +34,23 @@ need_cmd rsync
 HOST="$1"
 DEST="${2%/}"
 
-REMOTE_USER="narkatee"
+REMOTE_USER="openclaw"
 REMOTE_STATE_DIR="/home/${REMOTE_USER}/.openclaw"
 REMOTE_UNIT="openclaw-gateway"
+REMOTE_MACHINE="${REMOTE_USER}@.host"
 
 mkdir -p "$DEST"
 
 was_active=0
 
-if ssh "$HOST" "sudo -n -iu ${REMOTE_USER} systemctl --user is-active --quiet ${REMOTE_UNIT}" >/dev/null 2>&1; then
+if ssh "$HOST" "sudo -n systemctl --machine=${REMOTE_MACHINE} --user is-active --quiet ${REMOTE_UNIT}" >/dev/null 2>&1; then
   was_active=1
-  ssh "$HOST" "sudo -n -iu ${REMOTE_USER} systemctl --user stop ${REMOTE_UNIT}"
+  ssh "$HOST" "sudo -n systemctl --machine=${REMOTE_MACHINE} --user stop ${REMOTE_UNIT}"
 fi
 
 restore_on_exit() {
   if [[ "$was_active" -eq 1 ]]; then
-    ssh "$HOST" "sudo -n -iu ${REMOTE_USER} systemctl --user start ${REMOTE_UNIT}" >/dev/null 2>&1 || true
+    ssh "$HOST" "sudo -n systemctl --machine=${REMOTE_MACHINE} --user start ${REMOTE_UNIT}" >/dev/null 2>&1 || true
   fi
 }
 trap restore_on_exit EXIT INT TERM
@@ -66,7 +67,7 @@ rsync \
   "${DEST}/"
 
 if [[ "$was_active" -eq 1 ]]; then
-  ssh "$HOST" "sudo -n -iu ${REMOTE_USER} systemctl --user start ${REMOTE_UNIT}"
+  ssh "$HOST" "sudo -n systemctl --machine=${REMOTE_MACHINE} --user start ${REMOTE_UNIT}"
   was_active=0
 fi
 

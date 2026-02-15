@@ -6,18 +6,16 @@
   home-manager.useUserPackages = true;
   home-manager.backupFileExtension = "hm-bak";
 
-  home-manager.users.narkatee = {
+  home-manager.users.openclaw = {
     imports = [ nix-openclaw.homeManagerModules.openclaw ];
 
-    home.username = "narkatee";
-    home.homeDirectory = "/home/narkatee";
+    home.username = "openclaw";
+    home.homeDirectory = "/home/openclaw";
     home.stateVersion = "25.05";
     programs.home-manager.enable = true;
-    home.file.".openclaw/openclaw.json".force = true;
 
     programs.openclaw = {
       enable = true;
-      documents = ../openclaw-documents;
 
       instances.default = {
         enable = true;
@@ -43,6 +41,9 @@
 
     systemd.user.services.openclaw-gateway.Service.EnvironmentFile = [
       config.sops.templates.openclaw_gateway_env.path
+    ];
+    systemd.user.services.openclaw-gateway.Service.Environment = [
+      "PATH=/etc/profiles/per-user/openclaw/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     ];
     systemd.user.services.openclaw-gateway.Unit.X-Restart-Triggers = [
       config.sops.secrets.openclaw_gateway_token.sopsFileHash

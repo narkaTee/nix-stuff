@@ -5,6 +5,7 @@
     ../../modules/base.nix
     ../../modules/disko.nix
     ../../modules/users/narkatee.nix
+    ../../modules/users/openclaw.nix
   ];
 
   networking.hostName = "claw-box";

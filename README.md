@@ -95,6 +95,19 @@ Key points:
 - `narkatee` keys source: `https://github.com/narkaTee.keys`
 - Keys are stored in `keys/narkatee.pub`.
 
+### User: openclaw
+
+Path: `modules/users/openclaw.nix`
+
+Dedicated runtime account for the OpenClaw gateway and its mutable state.
+
+Key points:
+
+- no password login
+- no SSH authorized keys
+- user services can run without active login session (`linger = true`)
+- runtime state is stored in `/home/openclaw/.openclaw`
+
 ### Base module
 
 Path: `modules/base.nix`
@@ -134,18 +147,18 @@ Key points:
 
 - uses `secrets/claw-box.yaml` as default SOPS file
 - decrypts with host SSH age key (`/etc/ssh/ssh_host_ed25519_key`)
-- installs OpenClaw secrets with mode `0400` for user `narkatee`
+- installs OpenClaw secrets with mode `0400` for user `openclaw`
 - renders `OPENCLAW_GATEWAY_TOKEN`, `ANTHROPIC_API_KEY`, and `BRAVE_API_KEY`
 
 ### OpenClaw module
 
 Path: `modules/openclaw.nix`
 
-Configures Home Manager and the OpenClaw gateway for host `claw-box`.
+Configures Home Manager and the OpenClaw gateway service for host `claw-box`.
 
 Key points:
 
-- enables `nix-openclaw` overlay and Home Manager for `narkatee`
+- enables `nix-openclaw` overlay and Home Manager for `openclaw`
 - runs one `instances.default` gateway in local mode with token auth
 - Telegram bot auth uses SOPS token file and `dmPolicy = "pairing"`
 - gateway environment is sourced from rendered SOPS template
@@ -155,23 +168,26 @@ Key points:
 
 ## claw-box
 
+A VM running OpenClaw 🦞
+
 - Flake output: `.#claw-box`
 - Host config: `hosts/claw-box/default.nix`
-- `claw-box`: 🦞 VM running OpenClaw
 
-### Users
+### Security Model
 
-- `root`: no password, no SSH login, no authorized keys.
-- `narkatee`: SSH key-only login, passwordless sudo.
-- `narkatee` keys source: `https://github.com/narkaTee.keys`
-- Keys are stored in `keys/narkatee.pub`.
-- `sshguard` enabled for `sshd`.
+- management user `narkatee`
+- OpenClaw runtime user `openclaw`
+- `openclaw` has no SSH login and no password login
+- operations run as `narkatee` and switch user via `sudo -iu openclaw` when needed
+
+Operational note:
+- use `sudo -iu openclaw` (login shell), not plain `sudo -u openclaw`, for `openclaw` CLI commands; non-login shells can miss gateway auth env and fail with auth/token errors
 
 ### OpenClaw on claw-box
 
 - OpenClaw module: `modules/openclaw.nix`
-- OpenClaw documents: `openclaw-documents/`
-- Home Manager user: `narkatee`
+- Home Manager user: `openclaw`
+- Runtime state path: `/home/openclaw/.openclaw` (self-managed on host)
 
 #### Telegram setup
 
@@ -203,22 +219,22 @@ After deploy:
 2. On the server, list pending pairing requests:
 
 ```bash
-ssh claw-box 'sudo -iu narkatee openclaw pairing list telegram'
+ssh claw-box 'sudo -iu openclaw openclaw pairing list telegram'
 ```
 
 3. Approve the code:
 
 ```bash
-ssh claw-box 'sudo -iu narkatee openclaw pairing approve telegram <CODE>'
+ssh claw-box 'sudo -iu openclaw openclaw pairing approve telegram <CODE>'
 ```
 
-Approved IDs are stored on-host under `~/.openclaw/credentials/telegram-allowFrom.json`.
+Approved IDs are stored on-host under `/home/openclaw/.openclaw/credentials/telegram-allowFrom.json`.
 
 #### Verify OpenClaw
 
 ```bash
-ssh claw-box 'systemctl --user status openclaw-gateway --no-pager'
-ssh claw-box 'journalctl --user -u openclaw-gateway -n 100 --no-pager'
+ssh claw-box 'sudo -n systemctl --machine=openclaw@.host --user status openclaw-gateway --no-pager'
+ssh claw-box 'sudo -n journalctl --machine=openclaw@.host --user-unit openclaw-gateway -n 100 --no-pager'
 ```
 
 Then message your bot again from the approved account.
@@ -229,3 +245,17 @@ Encrypted secrets file:
 
 If the VM is reprovisioned (new SSH host key), update `secrets/.sops.yaml`
 recipient and re-encrypt with `scripts/update-secrets`.
+
+## OpenClaw State Backup
+
+Back up OpenClaw runtime state from the backup host in pull mode:
+
+```bash
+scripts/claw-backup claw-box /ssd-pool/backup/claw-box/
+```
+
+Restore to a (re)provisioned host:
+
+```bash
+scripts/claw-restore /ssd-pool/backup/claw-box/ claw-box
+```

@@ -17,6 +17,7 @@ Manage NixOS hosts with a single flake.
 | Base | `modules/base.nix` | Baseline host hardening and boot defaults |
 | Disko | `modules/disko.nix` | Disk layout and filesystems |
 | User `narkatee` | `modules/users/narkatee.nix` | Admin user, SSH keys, sudo policy |
+| User `openclaw` | `modules/users/openclaw.nix` | Runtime user for OpenClaw state/service |
 | SOPS | `modules/secrets/sops.nix` | Secrets and rendered runtime env |
 | OpenClaw | `modules/openclaw.nix` | OpenClaw + Home Manager host setup |
 
@@ -27,7 +28,7 @@ Manage NixOS hosts with a single flake.
 - Backup script: `scripts/claw-backup`
 - Restore script: `scripts/claw-restore`
 - Encrypted secrets: `secrets/claw-box.yaml`
-- OpenClaw docs: `openclaw-documents/{AGENTS.md,SOUL.md,TOOLS.md}`
+- OpenClaw runtime state: `/home/openclaw/.openclaw`
 
 ## Documentation
 
