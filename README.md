@@ -231,6 +231,7 @@ Key points:
 - sets `gateway.mode = "remote"` in OpenClaw config
 - disables local `openclaw-gateway` user service on workstation
 - runs `openclaw node run` as a user service (`openclaw-node-host`)
+- injects `OPENCLAW_CONFIG_PATH` for node runtime browser settings (default profile `openclaw`, explicit Chromium path on NixOS)
 - uses SOPS-rendered `OPENCLAW_GATEWAY_TOKEN` to authenticate to `claw-box`
 
 ### Workstation desktop module
@@ -366,6 +367,8 @@ OpenClaw behavior on this host:
 - only `openclaw_gateway_token` is materialized
 - `openclaw-node-host` user service connects to `10.77.0.1:18789` over `wg-openclaw`
 - this host does not run the OpenClaw gateway service
+- browser control is configured via service-level `OPENCLAW_CONFIG_PATH` (not `~/.openclaw/openclaw.json`, which is self-managed runtime state)
+- browser config pins `browser.defaultProfile = "openclaw"` and `browser.executablePath = "/run/current-system/sw/bin/chromium-browser"` to avoid `No supported browser found` / Chrome extension relay mismatch errors
 - required decrypted secrets:
   - from `secrets/claw-shared.yaml`: `openclaw_gateway_token`, `wireguard_openclaw_preshared_key`
   - from `secrets/claw-workstation.yaml`: `wireguard_claw_workstation_private_key`, `user_openclaw_password`
@@ -389,6 +392,7 @@ Verify node host service (on `claw-workstation`):
 ```bash
 ssh claw-workstation 'sudo -n systemctl --machine=openclaw@.host --user status openclaw-node-host --no-pager'
 ssh claw-workstation 'sudo -n journalctl --machine=openclaw@.host --user-unit openclaw-node-host -n 100 --no-pager'
+ssh claw-workstation 'sudo -n systemctl --machine=openclaw@.host --user show openclaw-node-host -p Environment | grep OPENCLAW_CONFIG_PATH'
 ```
 
 Verify WireGuard:

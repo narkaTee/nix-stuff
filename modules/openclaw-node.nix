@@ -1,6 +1,14 @@
-{ config, lib, nix-openclaw, ... }:
+{ config, lib, nix-openclaw, pkgs, ... }:
 let
   cfg = config.services.openclawNode;
+  nodeRuntimeConfig = pkgs.writeText "openclaw-node-runtime.json" (builtins.toJSON {
+    browser = {
+      enabled = true;
+      defaultProfile = "openclaw";
+      executablePath = "/run/current-system/sw/bin/chromium-browser";
+      headless = true;
+    };
+  });
 in
 {
   options.services.openclawNode = {
@@ -78,6 +86,7 @@ in
           EnvironmentFile = [ config.sops.templates.openclaw_node_env.path ];
           Environment = [
             "PATH=/etc/profiles/per-user/openclaw/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            "OPENCLAW_CONFIG_PATH=${nodeRuntimeConfig}"
           ];
         };
         Install = {
