@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  scripts/claw-backup <ssh-alias> <backup-dir>
+
+Example:
+  scripts/claw-backup claw-box /ssd-pool/backup/claw-box/
+USAGE
+}
+
+need_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "Missing command: $1" >&2
+    exit 1
+  fi
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ $# -ne 2 ]]; then
+  usage
+  exit 1
+fi
+
+need_cmd ssh
+need_cmd rsync
+
+HOST="$1"
+DEST="${2%/}"
+
+REMOTE_USER="narkatee"
+REMOTE_STATE_DIR="/home/${REMOTE_USER}/.openclaw"
+REMOTE_UNIT="openclaw-gateway"
+
+mkdir -p "$DEST"
+
+was_active=0
+
+if ssh "$HOST" "sudo -n -iu ${REMOTE_USER} systemctl --user is-active --quiet ${REMOTE_UNIT}" >/dev/null 2>&1; then
+  was_active=1
+  ssh "$HOST" "sudo -n -iu ${REMOTE_USER} systemctl --user stop ${REMOTE_UNIT}"
+fi
+
+restore_on_exit() {
+  if [[ "$was_active" -eq 1 ]]; then
+    ssh "$HOST" "sudo -n -iu ${REMOTE_USER} systemctl --user start ${REMOTE_UNIT}" >/dev/null 2>&1 || true
+  fi
+}
+trap restore_on_exit EXIT INT TERM
+
+ssh "$HOST" "sudo -n test -d ${REMOTE_STATE_DIR}"
+
+rsync \
+  -a \
+  --delete \
+  --no-owner \
+  --no-group \
+  --rsync-path="sudo -n rsync" \
+  "${HOST}:${REMOTE_STATE_DIR}/" \
+  "${DEST}/"
+
+if [[ "$was_active" -eq 1 ]]; then
+  ssh "$HOST" "sudo -n -iu ${REMOTE_USER} systemctl --user start ${REMOTE_UNIT}"
+  was_active=0
+fi
+
+echo "Backup complete: ${HOST}:${REMOTE_STATE_DIR}/ -> ${DEST}/"

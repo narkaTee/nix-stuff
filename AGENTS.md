@@ -24,6 +24,8 @@ Manage NixOS hosts with a single flake.
 
 - Bootstrap script: `scripts/bootstrap-hetzner.sh`
 - Secret editor: `scripts/update-secrets`
+- Backup script: `scripts/claw-backup`
+- Restore script: `scripts/claw-restore`
 - Encrypted secrets: `secrets/claw-box.yaml`
 - OpenClaw docs: `openclaw-documents/{AGENTS.md,SOUL.md,TOOLS.md}`
 
