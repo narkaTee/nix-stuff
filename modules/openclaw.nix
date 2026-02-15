@@ -1,4 +1,4 @@
-{ config, nix-openclaw, ... }:
+{ config, lib, nix-openclaw, ... }:
 {
   nixpkgs.overlays = [ nix-openclaw.overlays.default ];
 
@@ -39,6 +39,9 @@
         };
       };
     };
+
+    home.file.".openclaw/openclaw.json".enable = false;
+    home.activation.openclawConfigFiles = lib.mkForce { before = [ ]; after = [ ]; data = ""; };
 
     systemd.user.services.openclaw-gateway.Service.EnvironmentFile = [
       config.sops.templates.openclaw_gateway_env.path

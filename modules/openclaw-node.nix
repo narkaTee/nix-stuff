@@ -55,6 +55,9 @@ in
         };
       };
 
+      home.file.".openclaw/openclaw.json".enable = false;
+      home.activation.openclawConfigFiles = lib.mkForce { before = [ ]; after = [ ]; data = ""; };
+
       systemd.user.services.openclaw-node-host = {
         Unit = {
           Description = "OpenClaw node host";
