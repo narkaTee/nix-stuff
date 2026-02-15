@@ -44,5 +44,9 @@
     systemd.user.services.openclaw-gateway.Service.EnvironmentFile = [
       config.sops.templates.openclaw_gateway_env.path
     ];
+    systemd.user.services.openclaw-gateway.Unit.X-Restart-Triggers = [
+      config.sops.secrets.openclaw_gateway_token.sopsFileHash
+    ];
+    systemd.user.startServices = "sd-switch";
   };
 }
