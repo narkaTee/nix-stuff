@@ -1,5 +1,5 @@
 {
-  description = "Hetzner Cloud bootstrap with nixos-anywhere";
+  description = "Welcome to the land of the nix-lobster";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
@@ -13,20 +13,24 @@
     nix-openclaw.inputs.home-manager.follows = "home-manager";
   };
 
-  outputs = { nixpkgs, disko, home-manager, sops-nix, nix-openclaw, ... }: {
-    nixosConfigurations.claw-box = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
-      modules = [
-        disko.nixosModules.disko
-        home-manager.nixosModules.home-manager
-        sops-nix.nixosModules.sops
-        ./hosts/claw-box/default.nix
-        ./modules/secrets/sops.nix
-        ./modules/openclaw.nix
-      ];
-      specialArgs = {
-        inherit home-manager nix-openclaw;
+  outputs = { nixpkgs, disko, home-manager, sops-nix, nix-openclaw, ... }:
+    let
+      mkHost = hostPath: nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          disko.nixosModules.disko
+          home-manager.nixosModules.home-manager
+          sops-nix.nixosModules.sops
+          hostPath
+        ];
+        specialArgs = {
+          inherit home-manager nix-openclaw;
+        };
       };
+    in
+    {
+      nixosConfigurations.claw-box = mkHost ./hosts/claw-box/default.nix;
+      nixosConfigurations.claw-workstation-bootstrap = mkHost ./hosts/claw-workstation/bootstrap.nix;
+      nixosConfigurations.claw-workstation = mkHost ./hosts/claw-workstation/default.nix;
     };
-  };
 }

@@ -8,7 +8,8 @@ Manage NixOS hosts with a single flake.
 
 | Host | Flake source | Description |
 |------|--------------|-------------|
-| `claw-box` | `hosts/claw-box/default.nix` | VM running OpenClaw |
+| `claw-box` | `hosts/claw-box/default.nix` | VM running OpenClaw gateway + WireGuard endpoint |
+| `claw-workstation` | `hosts/claw-workstation/default.nix` | Workstation VM running OpenClaw node host + KDE + xrdp over WireGuard |
 
 ## Modules
 
@@ -18,8 +19,11 @@ Manage NixOS hosts with a single flake.
 | Disko | `modules/disko.nix` | Disk layout and filesystems |
 | User `narkatee` | `modules/users/narkatee.nix` | Admin user, SSH keys, sudo policy |
 | User `openclaw` | `modules/users/openclaw.nix` | Runtime user for OpenClaw state/service |
-| SOPS | `modules/secrets/sops.nix` | Secrets and rendered runtime env |
-| OpenClaw | `modules/openclaw.nix` | OpenClaw + Home Manager host setup |
+| Workstation Desktop | `modules/workstation-desktop.nix` | KDE Plasma + xrdp remote desktop setup |
+| Secrets (Gateway) | `modules/secrets/sops.nix` | Gateway secrets and rendered runtime env |
+| Secrets (Node) | `modules/secrets/node.nix` | Node host token + WireGuard secrets |
+| OpenClaw Gateway | `modules/openclaw.nix` | OpenClaw gateway + Home Manager host setup |
+| OpenClaw Node | `modules/openclaw-node.nix` | Headless OpenClaw node host setup |
 
 ## Additional Paths
 
@@ -27,13 +31,19 @@ Manage NixOS hosts with a single flake.
 - Secret editor: `scripts/update-secrets`
 - Backup script: `scripts/claw-backup`
 - Restore script: `scripts/claw-restore`
-- Encrypted secrets: `secrets/claw-box.yaml`
+- Encrypted secrets: `secrets/claw-box.yaml`, `secrets/claw-shared.yaml`, `secrets/claw-workstation.yaml`
 - OpenClaw runtime state: `/home/openclaw/.openclaw`
 
 ## Documentation
 
 - `README.md` is the detailed source for module behavior and operations.
-- See `README.md` sections: `Generic Modules` and `claw-box`.
+- See `README.md` sections: `Generic Modules`, `claw-box`, and `claw-workstation`.
+
+### Nix Modules
+
+- nix-openclaw: https://github.com/openclaw/nix-openclaw
+- sops-nix: https://github.com/Mic92/sops-nix
+- home-manager: https://nix-community.github.io/home-manager/
 
 ## Rules
 

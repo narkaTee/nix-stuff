@@ -7,7 +7,6 @@
     group = "openclaw";
     home = "/home/openclaw";
     linger = true;
-    hashedPassword = "!";
     openssh.authorizedKeys.keys = [ ];
   };
 }

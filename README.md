@@ -17,14 +17,49 @@ age-keygen -y ~/.config/sops/age/keys.txt
 Copy the printed `age1...` recipient into `secrets/.sops.yaml` as `user_local` and
 include it in `creation_rules`.
 
-Then re-encrypt the secret file:
+Then edit/re-encrypt the secret files:
 
 ```bash
 ./scripts/update-secrets secrets/claw-box.yaml
+./scripts/update-secrets secrets/claw-shared.yaml
+./scripts/update-secrets secrets/claw-workstation.yaml
 ```
 
+## WireGuard keys
+
+Generate a new keypair for each host and one shared PSK:
+
 ```bash
-./scripts/update-secrets secrets/<file>.yaml
+mkdir -p /tmp/wg-rotate
+
+wg genkey | tee /tmp/wg-rotate/claw-box.key | wg pubkey > /tmp/wg-rotate/claw-box.pub
+wg genkey | tee /tmp/wg-rotate/claw-workstation.key | wg pubkey > /tmp/wg-rotate/claw-workstation.pub
+wg genpsk > /tmp/wg-rotate/openclaw.psk
+```
+
+Put values in secrets:
+
+- `secrets/claw-box.yaml`: `wireguard_claw_box_private_key` from `/tmp/wg-rotate/claw-box.key`
+- `secrets/claw-workstation.yaml`: `wireguard_claw_workstation_private_key` from `/tmp/wg-rotate/claw-workstation.key`
+- `secrets/claw-shared.yaml`: `wireguard_openclaw_preshared_key` from `/tmp/wg-rotate/openclaw.psk`
+
+Update peer public keys in config:
+
+- `hosts/claw-box/default.nix`: set peer `publicKey` to `/tmp/wg-rotate/claw-workstation.pub`
+- `hosts/claw-workstation/default.nix`: set peer `publicKey` to `/tmp/wg-rotate/claw-box.pub`
+
+Rotate (small tunnel interruption while both hosts converge):
+
+```bash
+nix run nixpkgs#nixos-rebuild -- switch --flake .#claw-box --target-host <claw-box> --build-host <claw-box> --sudo
+nix run nixpkgs#nixos-rebuild -- switch --flake .#claw-workstation --target-host <claw-workstation> --build-host <claw-workstation> --sudo
+```
+
+Verify:
+
+```bash
+ssh claw-box 'sudo -n wg show wg-openclaw'
+ssh claw-workstation 'sudo -n wg show wg-openclaw'
 ```
 
 ## Update keys
@@ -103,7 +138,7 @@ Dedicated runtime account for the OpenClaw gateway and its mutable state.
 
 Key points:
 
-- no password login
+- no password login by default (host-specific overrides can set one)
 - no SSH authorized keys
 - user services can run without active login session (`linger = true`)
 - runtime state is stored in `/home/openclaw/.openclaw`
@@ -139,7 +174,7 @@ Key points:
 - 1G EFI system partition mounted at `/boot`
 - ext4 root filesystem mounted at `/`
 
-### SOPS module
+### SOPS module (gateway)
 
 Path: `modules/secrets/sops.nix`
 
@@ -149,10 +184,26 @@ Key points:
 
 - uses `secrets/claw-box.yaml` as default SOPS file
 - decrypts with host SSH age key (`/etc/ssh/ssh_host_ed25519_key`)
-- installs OpenClaw secrets with mode `0400` for user `openclaw`
+- loads gateway-host secrets from `secrets/claw-box.yaml`
+- loads shared secrets (`openclaw_gateway_token`, `wireguard_openclaw_preshared_key`) from `secrets/claw-shared.yaml`
 - renders `OPENCLAW_GATEWAY_TOKEN`, `ANTHROPIC_API_KEY`, and `BRAVE_API_KEY`
 
-### OpenClaw module
+### SOPS module (node)
+
+Path: `modules/secrets/node.nix`
+
+Declares minimal secrets for a node host that connects to a remote gateway.
+
+Key points:
+
+- uses `secrets/claw-workstation.yaml` as default SOPS file
+- decrypts with host SSH age key (`/etc/ssh/ssh_host_ed25519_key`)
+- loads shared secrets (`openclaw_gateway_token`, `wireguard_openclaw_preshared_key`) from `secrets/claw-shared.yaml`
+- loads workstation-host secrets from `secrets/claw-workstation.yaml`
+- installs `user_openclaw_password` from `secrets/claw-workstation.yaml` with `neededForUsers = true`
+- renders `OPENCLAW_GATEWAY_TOKEN` for node host auth
+
+### OpenClaw gateway module
 
 Path: `modules/openclaw.nix`
 
@@ -162,9 +213,39 @@ Key points:
 
 - enables `nix-openclaw` overlay and Home Manager for `openclaw`
 - runs one `instances.default` gateway in local mode with token auth
+- gateway listens on `lan` so remote nodes can connect
+- opens `18789/tcp` only on interface `wg-openclaw` (not publicly)
 - Telegram bot auth uses SOPS token file and `dmPolicy = "pairing"`
 - gateway environment is sourced from rendered SOPS template
 - gateway restarts automatically on secrets file changes
+
+### OpenClaw node module
+
+Path: `modules/openclaw-node.nix`
+
+Configures a headless OpenClaw node host service for `claw-workstation`.
+
+Key points:
+
+- enables `nix-openclaw` overlay and Home Manager for `openclaw`
+- sets `gateway.mode = "remote"` in OpenClaw config
+- disables local `openclaw-gateway` user service on workstation
+- runs `openclaw node run` as a user service (`openclaw-node-host`)
+- uses SOPS-rendered `OPENCLAW_GATEWAY_TOKEN` to authenticate to `claw-box`
+
+### Workstation desktop module
+
+Path: `modules/workstation-desktop.nix`
+
+Enables KDE Plasma and xrdp for workstation hosts.
+
+Key points:
+
+- enables SDDM + Plasma 6
+- keeps Wayland available for local desktop logins
+- enables xrdp for remote desktop sessions
+- does not open firewall for RDP
+- xrdp session command is `dbus-run-session startplasma-x11`
 
 # Hosts
 
@@ -181,6 +262,8 @@ A VM running OpenClaw 🦞
 - OpenClaw runtime user `openclaw`
 - `openclaw` has no SSH login and no password login
 - operations run as `narkatee` and switch user via `sudo -iu openclaw` when needed
+- WireGuard link `wg-openclaw` is used for node-to-gateway traffic
+- public ingress is limited to `22/tcp` and `51820/udp`; gateway `18789/tcp` is tunnel-only
 
 Operational note:
 - use `sudo -iu openclaw` (login shell), not plain `sudo -u openclaw`, for `openclaw` CLI commands; non-login shells can miss gateway auth env and fail with auth/token errors
@@ -204,10 +287,14 @@ Operational note:
 ```
 
 In the editor set:
-- `openclaw_telegram_token`
-- `openclaw_gateway_token` (use `openssl rand -hex 32`)
-- `openclaw_anthropic_api_key`
-- `openclaw_brave_search_token` (enables `web_search` via `BRAVE_API_KEY`)
+- in `secrets/claw-box.yaml`:
+  - `openclaw_telegram_token`
+  - `openclaw_anthropic_api_key`
+  - `openclaw_brave_search_token` (enables `web_search` via `BRAVE_API_KEY`)
+  - `wireguard_claw_box_private_key`
+- in `secrets/claw-shared.yaml`:
+  - `openclaw_gateway_token` (use `openssl rand -hex 32`)
+  - `wireguard_openclaw_preshared_key`
 
 Apply changes with nix run.
 
@@ -241,8 +328,10 @@ ssh claw-box 'sudo -n journalctl --machine=openclaw@.host --user-unit openclaw-g
 
 Then message your bot again from the approved account.
 
-Encrypted secrets file:
+Encrypted secrets files:
 - `secrets/claw-box.yaml`
+- `secrets/claw-shared.yaml`
+- `secrets/claw-workstation.yaml`
 - SOPS config: `secrets/.sops.yaml`
 
 If the VM is reprovisioned (new SSH host key), update `secrets/.sops.yaml`
@@ -261,3 +350,58 @@ Restore to a (re)provisioned host:
 ```bash
 scripts/claw-restore /ssd-pool/backup/claw-box/ claw-box
 ```
+
+## claw-workstation
+
+A workstation VM running KDE Plasma + xrdp and a headless OpenClaw node host.
+
+- Flake output: `.#claw-workstation`
+- Host config: `hosts/claw-workstation/default.nix`
+- Desktop module: `modules/workstation-desktop.nix`
+- OpenClaw node module: `modules/openclaw-node.nix`
+
+OpenClaw behavior on this host:
+
+- no Telegram/provider secrets are installed here
+- only `openclaw_gateway_token` is materialized
+- `openclaw-node-host` user service connects to `10.77.0.1:18789` over `wg-openclaw`
+- this host does not run the OpenClaw gateway service
+- required decrypted secrets:
+  - from `secrets/claw-shared.yaml`: `openclaw_gateway_token`, `wireguard_openclaw_preshared_key`
+  - from `secrets/claw-workstation.yaml`: `wireguard_claw_workstation_private_key`, `user_openclaw_password`
+
+Set `user_openclaw_password` to a password hash (not plaintext):
+
+```bash
+nix shell nixpkgs#mkpasswd -c mkpasswd -m yescrypt
+```
+
+Node pairing (from `claw-box`):
+
+```bash
+ssh claw-box 'sudo -iu openclaw openclaw devices list'
+ssh claw-box 'sudo -iu openclaw openclaw devices approve <REQUEST_ID>'
+ssh claw-box 'sudo -iu openclaw openclaw nodes status'
+```
+
+Verify node host service (on `claw-workstation`):
+
+```bash
+ssh claw-workstation 'sudo -n systemctl --machine=openclaw@.host --user status openclaw-node-host --no-pager'
+ssh claw-workstation 'sudo -n journalctl --machine=openclaw@.host --user-unit openclaw-node-host -n 100 --no-pager'
+```
+
+Verify WireGuard:
+
+```bash
+ssh claw-box 'sudo -n wg show wg-openclaw'
+ssh claw-workstation 'sudo -n wg show wg-openclaw'
+```
+
+RDP is not opened on the firewall. Use an SSH tunnel:
+
+```bash
+ssh -N -L 13389:127.0.0.1:3389 narkatee@claw-workstation
+```
+
+Then connect your RDP client to `127.0.0.1:13389`.

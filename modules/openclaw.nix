@@ -23,6 +23,7 @@
         config = {
           gateway = {
             mode = "local";
+            bind = "lan";
             auth = {
               mode = "token";
             };
@@ -50,4 +51,6 @@
     ];
     systemd.user.startServices = "sd-switch";
   };
+
+  networking.firewall.interfaces.wg-openclaw.allowedTCPPorts = [ 18789 ];
 }
