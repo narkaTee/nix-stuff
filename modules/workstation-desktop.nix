@@ -11,8 +11,17 @@
 
   environment.systemPackages = with pkgs; [
     chromium
+    nodejs_22
     vscode
   ];
+
+  # Keep npm global installs writable on NixOS by defaulting to a user-owned prefix.
+  environment.etc."npmrc".text = ''
+    prefix=''${HOME}/.local/npm
+  '';
+  environment.extraInit = ''
+    export PATH="$HOME/.local/npm/bin:$PATH"
+  '';
 
   services.xrdp.enable = true;
   services.xrdp.openFirewall = false;
