@@ -130,6 +130,19 @@ Key points:
 - `narkatee` keys source: `https://github.com/narkaTee.keys`
 - Keys are stored in `keys/narkatee.pub`.
 
+### User dotfiles module
+
+Path: `modules/users/dotfiles.nix`
+
+Reusable dotfiles module for different user accounts.
+
+Key points:
+
+- configurable via `services.dotfilesSync`
+- installs `ruby`, `rake`, and `dash`
+- syncs a git repo to a configurable target path (default: `/home/<user>/dotfiles`)
+- runs a one-shot `systemd` sync service as the configured user
+
 ### User: openclaw
 
 Path: `modules/users/openclaw.nix`

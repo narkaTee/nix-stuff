@@ -5,6 +5,7 @@
     ../../modules/base.nix
     ../../modules/disko.nix
     ../../modules/users/narkatee.nix
+    ../../modules/users/dotfiles.nix
     ../../modules/users/openclaw.nix
     ../../modules/secrets/node.nix
     ../../modules/openclaw-node.nix
@@ -29,6 +30,11 @@
 
   services.openclawNode.gatewayHost = "10.77.0.1";
   services.openclawNode.gatewayPort = 18789;
+  services.dotfilesSync = {
+    enable = true;
+    user = "narkatee";
+    repository = "https://github.com/narkaTee/dotfiles";
+  };
   users.users.openclaw.hashedPasswordFile = config.sops.secrets.user_openclaw_password.path;
 
   system.stateVersion = "25.05";

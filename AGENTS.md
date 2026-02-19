@@ -18,6 +18,7 @@ Manage NixOS hosts with a single flake.
 | Base | `modules/base.nix` | Baseline host hardening and boot defaults |
 | Disko | `modules/disko.nix` | Disk layout and filesystems |
 | User `narkatee` | `modules/users/narkatee.nix` | Admin user, SSH keys, sudo policy |
+| User Dotfiles | `modules/users/dotfiles.nix` | Reusable dotfiles sync module (user/repo configurable) + ruby/rake |
 | User `openclaw` | `modules/users/openclaw.nix` | Runtime user for OpenClaw state/service |
 | Workstation Desktop | `modules/workstation-desktop.nix` | KDE Plasma + xrdp remote desktop setup |
 | Secrets (Gateway) | `modules/secrets/sops.nix` | Gateway secrets and rendered runtime env |
